@@ -7,23 +7,26 @@ class Order(models.Model):
         ('requested', 'Requested'),
         ('accepted', 'Accepted'),
         ('in_transit', 'In Transit'),
-        ('delivered', 'Delivered'),
+        ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
     ]
 
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='orders')
     driver = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='driver_orders')
     
-    # Locations (Using PostGIS PointField)
-    pickup_location = geomodels.PointField(srid=4326)  # Stores (Longitude, Latitude)
+    # Locations
+    pickup_location = geomodels.PointField(srid=4326)
     dropoff_location = geomodels.PointField(srid=4326)
     pickup_address = models.TextField()
     dropoff_address = models.TextField()
     
-    # Money & Math
+    # --- THESE ARE THE MISSING COLUMNS ---
+    driver_lat = models.FloatField(null=True, blank=True)
+    driver_lng = models.FloatField(null=True, blank=True)
+    
+    # Pricing and status
     distance_km = models.FloatField(default=0.0)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='requested')
     created_at = models.DateTimeField(auto_now_add=True)
 
