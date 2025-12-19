@@ -29,4 +29,4 @@ class DriverProfile(models.Model):
     current_location = geomodels.PointField(srid=4326, null=True, blank=True)
     
     def __str__(self):
-        return f"Driver: {self.user.username} (Verified: {self.is_verified})"
+        return f"{self.user.username} - {'Online' if self.is_online else 'Offline'}"

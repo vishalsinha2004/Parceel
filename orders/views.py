@@ -41,7 +41,8 @@ class OrderViewSet(viewsets.ModelViewSet):
             distance_km=dist_km,
             price=price,
             pickup_address=pickup_addr,   # <-- Safe Value
-            dropoff_address=dropoff_addr, # <-- Safe Value
+            dropoff_address=dropoff_addr, # <-- Safe Value.
+            route_geometry=route_geometry,
             status='requested'
         )
 

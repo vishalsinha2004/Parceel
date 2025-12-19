@@ -4,6 +4,13 @@ from .models import DriverProfile
 
 User = get_user_model()
 
+
+class DriverProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DriverProfile
+        fields = ['id', 'is_verified', 'is_online']
+        read_only_fields = ['is_verified']
+
 class DriverSignupSerializer(serializers.ModelSerializer):
     # Explicitly define file fields for the upload form
     photo = serializers.ImageField(write_only=True, required=True)
@@ -23,6 +30,8 @@ class DriverSignupSerializer(serializers.ModelSerializer):
         license_img = validated_data.pop('license_image')
         license_num = validated_data.pop('license_number')
         password = validated_data.pop('password')
+        profile_data = validated_data.pop('driver_profile', {})
+        user = User.objects.create_user(**validated_data)
 
         # 2. Create the base User
         user = User.objects.create_user(**validated_data)
@@ -37,6 +46,7 @@ class DriverSignupSerializer(serializers.ModelSerializer):
             aadhar_card=aadhar,
             license_image=license_img,
             license_number=license_num,
-            is_verified=False # Default to Not Verified
+            is_verified=False,
+             **profile_data # Default to Not Verified
         )
         return user

@@ -3,6 +3,7 @@ from django.db import models
 from django.conf import settings
 
 class Order(models.Model):
+    route_geometry = models.JSONField(null=True, blank=True)
     STATUS_CHOICES = [
         ('requested', 'Requested'),
         ('accepted', 'Accepted'),
