@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework import permissions
 from .views import DriverSignupView, DriverStatusView, DriverProfileViewSet
+from .views import CustomerSignupView
 
 # Define the Public Login View correctly
 class PublicTokenObtainPairView(TokenObtainPairView):
@@ -21,6 +22,8 @@ urlpatterns = [
     path('signup/driver/', DriverSignupView.as_view(), name='driver-signup'),
     path('status/', DriverStatusView.as_view(), name='driver-status'),
     
+
+    path('signup/', CustomerSignupView.as_view(), name='customer-signup'),
     # Router URLs (includes toggle_status)
     path('', include(router.urls)),
 ]

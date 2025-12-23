@@ -10,6 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import DriverProfile
 from rest_framework import permissions
+from .serializers import UserSerializer
 
 User = get_user_model()
 
@@ -24,6 +25,24 @@ class DriverSignupView(generics.CreateAPIView):
             serializer.save()
             return Response({"message": "Signup successful! Wait for Admin verification."}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+# backend/users/views.py
+
+class CustomerSignupView(generics.CreateAPIView):
+    # Use a standard User serializer or create a new one
+    serializer_class = UserSerializer 
+    permission_classes = [permissions.AllowAny] # Must be public
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Account created successfully!"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 
 class DriverStatusView(APIView):
     def get(self, request):
