@@ -9,6 +9,7 @@ from .utils import get_ride_details
 from rest_framework.permissions import AllowAny
 import razorpay
 from django.conf import settings
+client = razorpay.Client(auth=("rzp_test_RoJQxZI94ZIcLn", "t9gtZKjiRF6Qpggtt6pzuLuV"))
 User = get_user_model()
 
 class OrderViewSet(viewsets.ModelViewSet):
