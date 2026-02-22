@@ -19,6 +19,28 @@ class OrderViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny] # This allows requests without tokens
     authentication_classes = []# orders/views.py
 
+    # --- ADD THIS SECTION ---
+    @action(detail=True, methods=['post'])
+    def accept_ride(self, request, pk=None):
+        order = self.get_object()
+        
+        if order.status != 'requested':
+            return Response({"error": "Ride is already accepted or completed"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Update status to accepted
+        order.status = 'accepted'
+        
+        # If you have a driver field in your model, assign it here:
+        # order.driver = request.user 
+        
+        order.save()
+        
+        return Response({
+            "status": "accepted",
+            "message": f"Ride {pk} has been accepted successfully"
+        }, status=status.HTTP_200_OK)
+    # -----------------------
+
     def create(self, request, *args, **kwargs):
         # 1. Use the correct keys sent from your frontend
         p_lng = request.data.get('pickup_lng') or request.data.get('pickup_longitude')
