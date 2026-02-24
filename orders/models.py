@@ -14,7 +14,8 @@ class Order(models.Model):
 
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='orders')
     driver = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='driver_orders')
-    
+    rating = models.IntegerField(null=True, blank=True)
+    feedback = models.TextField(null=True, blank=True)
     # Locations
     pickup_location = geomodels.PointField(srid=4326)
     dropoff_location = geomodels.PointField(srid=4326)

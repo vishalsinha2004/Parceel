@@ -6,10 +6,11 @@ from django.contrib.auth import get_user_model
 from .models import Order
 from .serializers import OrderSerializer
 from .utils import get_ride_details
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 import razorpay
 from django.conf import settings
+
 client = razorpay.Client(auth=("rzp_test_SHfqRqFecIslSG", "LD8vhq3xQHjUhgD3NNFD9mhA"))
 User = get_user_model()
 
@@ -17,30 +18,63 @@ class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all().order_by('-created_at')
     serializer_class = OrderSerializer
     permission_classes = [AllowAny] # This allows requests without tokens
-    authentication_classes = []# orders/views.py
+    authentication_classes = []
 
-    # --- ADD THIS SECTION ---
-    @action(detail=True, methods=['post'])
+    # ==========================================
+    # 1. DRIVER APP: ACCEPT RIDE
+    # ==========================================
+    @action(
+        detail=True, 
+        methods=['post'], 
+        permission_classes=[IsAuthenticated], 
+        authentication_classes=[JWTAuthentication]
+    )
     def accept_ride(self, request, pk=None):
         order = self.get_object()
         
         if order.status != 'requested':
             return Response({"error": "Ride is already accepted or completed"}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Update status to accepted
+        # Update status to accepted and assign driver
         order.status = 'accepted'
-        
-        # If you have a driver field in your model, assign it here:
-        # order.driver = request.user 
-        
+        order.driver = request.user 
         order.save()
         
         return Response({
             "status": "accepted",
             "message": f"Ride {pk} has been accepted successfully"
         }, status=status.HTTP_200_OK)
-    # -----------------------
 
+    # ==========================================
+    # 2. CUSTOMER APP: RATE DRIVER
+    # ==========================================
+    @action(detail=True, methods=['post'])
+    def rate_driver(self, request, pk=None):
+        order = self.get_object()
+        
+        if order.status != 'completed':
+            return Response({"error": "Can only rate completed rides"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        rating = request.data.get('rating')
+        feedback = request.data.get('feedback', '')
+
+        if not rating:
+            return Response({"error": "Rating is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            order.rating = int(rating)
+            order.feedback = feedback
+            order.save()
+            return Response({
+                "status": "success",
+                "message": "Thank you! Rating submitted successfully."
+            }, status=status.HTTP_200_OK)
+        except ValueError:
+            return Response({"error": "Invalid rating format"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # ==========================================
+    # 3. CREATE RIDE / ORDER
+    # ==========================================
     def create(self, request, *args, **kwargs):
         # 1. Use the correct keys sent from your frontend
         p_lng = request.data.get('pickup_lng') or request.data.get('pickup_longitude')
