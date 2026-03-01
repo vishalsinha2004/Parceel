@@ -69,13 +69,16 @@ class DriverProfileViewSet(viewsets.ModelViewSet):
     # NEW: Ensure only logged-in users can access these actions
     permission_classes = [IsAuthenticated] 
 
-    @action(detail=False, methods=['post'], url_path='toggle_status')
+    # ADD THIS ACTION
+    @action(detail=False, methods=['post'])
     def toggle_status(self, request):
-        # request.user is now guaranteed to be a real User object
         try:
+            # Get the profile for the currently logged-in user
+            profile, created = DriverProfile.objects.get_or_create(user=request.user)
             profile = DriverProfile.objects.get(user=request.user)
             profile.is_online = not profile.is_online
             profile.save()
-            return Response({'is_online': profile.is_online})
+            
+            return Response({"is_online": profile.is_online}, status=status.HTTP_200_OK)
         except DriverProfile.DoesNotExist:
-            return Response({'error': 'Driver profile not found'}, status=404)
+            return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)

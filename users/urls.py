@@ -11,7 +11,7 @@ class PublicTokenObtainPairView(TokenObtainPairView):
     permission_classes = [permissions.AllowAny]
 
 router = DefaultRouter()
-router.register(r'driver_profile', DriverProfileViewSet, basename='driver_profile')
+router.register(r'driver_profile', DriverProfileViewSet, basename='driverprofile')
 
 urlpatterns = [
     # JWT Auth

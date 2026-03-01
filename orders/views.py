@@ -125,3 +125,26 @@ class OrderViewSet(viewsets.ModelViewSet):
             "razorpay_order_id": razorpay_order['id'],
             "route_geometry": route_geometry
         })
+    
+    # ==========================================
+    # 4. DRIVER APP: COMPLETE RIDE
+    # ==========================================
+    @action(
+        detail=True, 
+        methods=['post'], 
+        permission_classes=[IsAuthenticated], 
+        authentication_classes=[JWTAuthentication]
+    )
+    def complete_ride(self, request, pk=None):
+        order = self.get_object()
+        
+        if order.status not in ['accepted', 'in_transit']:
+            return Response({"error": "Ride is not in progress"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        order.status = 'completed'
+        order.save()
+        
+        return Response({
+            "status": "completed",
+            "message": f"Ride {pk} has been completed successfully"
+        }, status=status.HTTP_200_OK)
