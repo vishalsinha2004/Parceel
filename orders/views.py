@@ -9,8 +9,8 @@ from .utils import get_ride_details
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 import razorpay
-from django.conf import settings
 
+# Using your provided test credentials
 client = razorpay.Client(auth=("rzp_test_SHfqRqFecIslSG", "LD8vhq3xQHjUhgD3NNFD9mhA"))
 User = get_user_model()
 
@@ -73,7 +73,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Response({"error": "Invalid rating format"}, status=status.HTTP_400_BAD_REQUEST)
 
     # ==========================================
-    # 3. CREATE RIDE / ORDER
+    # 3. CREATE RIDE / ORDER (Now starts as PENDING)
     # ==========================================
     def create(self, request, *args, **kwargs):
         # 1. Use the correct keys sent from your frontend
@@ -91,8 +91,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         dist_km, price, route_geometry = get_ride_details((p_lng, p_lat), (d_lng, d_lat))
 
-        # 2. ENSURE MINIMUM PRICE (Fixes the BadRequestError)
-        # Razorpay minimum is 100 paise (1 INR)
+        # 2. ENSURE MINIMUM PRICE
         if price < 1:
             price = 1.0 
 
@@ -116,7 +115,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             distance_km=dist_km,
             price=price,
             route_geometry=route_geometry,
-            status='requested'
+            status='pending'  # <--- FIX 1: Ride is hidden from drivers until paid
         )
 
         return Response({
@@ -125,7 +124,36 @@ class OrderViewSet(viewsets.ModelViewSet):
             "razorpay_order_id": razorpay_order['id'],
             "route_geometry": route_geometry
         })
-    
+
+    # ==========================================
+    # 3.5 CUSTOMER APP: VERIFY PAYMENT (NEW FIX 2)
+    # ==========================================
+    @action(detail=True, methods=['post'])
+    def verify_payment(self, request, pk=None):
+        order = self.get_object()
+        
+        # Get data sent by React after successful Razorpay checkout
+        razorpay_order_id = request.data.get('razorpay_order_id')
+        razorpay_payment_id = request.data.get('razorpay_payment_id')
+        razorpay_signature = request.data.get('razorpay_signature')
+        
+        try:
+            # Securely verify with Razorpay that the payment is real
+            client.utility.verify_payment_signature({
+                'razorpay_order_id': razorpay_order_id,
+                'razorpay_payment_id': razorpay_payment_id,
+                'razorpay_signature': razorpay_signature
+            })
+            
+            # Payment is real! Dispatch the driver!
+            order.status = 'requested'
+            order.save()
+            
+            return Response({"message": "Payment successful, driver dispatched!"}, status=status.HTTP_200_OK)
+            
+        except razorpay.errors.SignatureVerificationError:
+            return Response({"error": "Payment verification failed."}, status=status.HTTP_400_BAD_REQUEST)
+
     # ==========================================
     # 4. DRIVER APP: COMPLETE RIDE
     # ==========================================
