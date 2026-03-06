@@ -76,13 +76,15 @@ class OrderViewSet(viewsets.ModelViewSet):
     # 3. CREATE RIDE / ORDER (Now starts as PENDING)
     # ==========================================
     def create(self, request, *args, **kwargs):
-        # 1. Use the correct keys sent from your frontend
         p_lng = request.data.get('pickup_lng') or request.data.get('pickup_longitude')
         p_lat = request.data.get('pickup_lat') or request.data.get('pickup_latitude')
         d_lng = request.data.get('dropoff_lng') or request.data.get('dropoff_longitude')
         d_lat = request.data.get('dropoff_lat') or request.data.get('dropoff_latitude')
         
-        # Convert to float safely
+        # ---> FIX 1: Catch the address strings from React <---
+        pickup_address = request.data.get('pickup_address', 'Location saved via GPS')
+        dropoff_address = request.data.get('dropoff_address', 'Location saved via GPS')
+        
         try:
             p_lng, p_lat = float(p_lng), float(p_lat)
             d_lng, d_lat = float(d_lng), float(d_lat)
@@ -91,31 +93,33 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         dist_km, price, route_geometry = get_ride_details((p_lng, p_lat), (d_lng, d_lat))
 
-        # 2. ENSURE MINIMUM PRICE
         if price < 1:
             price = 1.0 
 
-        # 3. Create Razorpay Order
         try:
             razorpay_order = client.order.create({
-                "amount": int(price * 100), # amount in paise
+                "amount": int(price * 100), 
                 "currency": "INR",
                 "payment_capture": "1"
             })
         except Exception as e:
             return Response({"error": f"Razorpay error: {str(e)}"}, status=500)
 
-        # 4. Save Order
         user = request.user if request.user.is_authenticated else User.objects.filter(is_superuser=True).first()
         
         order = Order.objects.create(
             customer=user,
             pickup_location=Point(p_lng, p_lat, srid=4326),
             dropoff_location=Point(d_lng, d_lat, srid=4326),
+            
+            # ---> FIX 2: Save the addresses to the database! <---
+            pickup_address=pickup_address,
+            dropoff_address=dropoff_address,
+            
             distance_km=dist_km,
             price=price,
             route_geometry=route_geometry,
-            status='pending'  # <--- FIX 1: Ride is hidden from drivers until paid
+            status='pending' 
         )
 
         return Response({
