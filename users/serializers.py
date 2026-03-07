@@ -53,16 +53,21 @@ class DriverSignupSerializer(serializers.ModelSerializer):
     
 
 class UserSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
-
     class Meta:
         model = User
-        fields = ('username', 'email', 'password')
+        # FIX: Add 'phone_number' to this list so Django doesn't ignore it
+        fields = ('id', 'username', 'email', 'phone_number', 'password', 'is_customer', 'is_driver')
+        extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
+        # FIX: Ensure phone_number is extracted and saved
+        phone_number = validated_data.pop('phone_number', None)
+        
         user = User.objects.create_user(
             username=validated_data['username'],
-            email=validated_data['email'],
-            password=validated_data['password']
+            email=validated_data.get('email', ''),
+            password=validated_data['password'],
+            is_customer=validated_data.get('is_customer', True),
+            phone_number=phone_number # Save it to the database
         )
         return user
