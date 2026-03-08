@@ -3,10 +3,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.contrib.gis.geos import Point
 from django.contrib.auth import get_user_model
+from django.db.models import Q  # <--- NEW: Required for advanced filtering
 from .models import Order
 from .serializers import OrderSerializer
 from .utils import get_ride_details
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 import razorpay
 
@@ -15,20 +16,45 @@ client = razorpay.Client(auth=("rzp_test_SHfqRqFecIslSG", "LD8vhq3xQHjUhgD3NNFD9
 User = get_user_model()
 
 class OrderViewSet(viewsets.ModelViewSet):
-    queryset = Order.objects.all().order_by('-created_at')
+    # 1. REMOVE the hardcoded 'all()' queryset
     serializer_class = OrderSerializer
-    permission_classes = [AllowAny] # This allows requests without tokens
-    authentication_classes = []
+    
+    # 2. SECURE THE VIEW: Ensure Django knows exactly who is making the request
+    permission_classes = [IsAuthenticated] 
+    authentication_classes = [JWTAuthentication]
+
+    # ==========================================
+    # 0. SMART FILTERING: Only show relevant data
+    # ==========================================
+    def get_queryset(self):
+        user = self.request.user
+        
+        # Security fallback: If not logged in, return nothing
+        if not user.is_authenticated:
+            return Order.objects.none()
+            
+        # A) IF USER IS A DRIVER
+        if getattr(user, 'is_driver', False):
+            # Show rides assigned to this driver OR new unassigned requests
+            return Order.objects.filter(
+                Q(driver=user) | Q(status='requested', driver__isnull=True)
+            ).order_by('-created_at')
+            
+        # B) IF USER IS A CUSTOMER
+        elif getattr(user, 'is_customer', False):
+            # Only show their own personal orders
+            return Order.objects.filter(customer=user).order_by('-created_at')
+            
+        # C) IF SUPERUSER (Admin)
+        if user.is_superuser:
+            return Order.objects.all().order_by('-created_at')
+            
+        return Order.objects.none()
 
     # ==========================================
     # 1. DRIVER APP: ACCEPT RIDE
     # ==========================================
-    @action(
-        detail=True, 
-        methods=['post'], 
-        permission_classes=[IsAuthenticated], 
-        authentication_classes=[JWTAuthentication]
-    )
+    @action(detail=True, methods=['post'])
     def accept_ride(self, request, pk=None):
         order = self.get_object()
         
@@ -81,7 +107,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         d_lng = request.data.get('dropoff_lng') or request.data.get('dropoff_longitude')
         d_lat = request.data.get('dropoff_lat') or request.data.get('dropoff_latitude')
         
-        # ---> FIX 1: Catch the address strings from React <---
+        # Catch the address strings from React
         pickup_address = request.data.get('pickup_address', 'Location saved via GPS')
         dropoff_address = request.data.get('dropoff_address', 'Location saved via GPS')
         
@@ -105,17 +131,13 @@ class OrderViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({"error": f"Razorpay error: {str(e)}"}, status=500)
 
-        user = request.user if request.user.is_authenticated else User.objects.filter(is_superuser=True).first()
-        
+        # Save Order mapping to the authenticated customer
         order = Order.objects.create(
-            customer=user,
+            customer=request.user,
             pickup_location=Point(p_lng, p_lat, srid=4326),
             dropoff_location=Point(d_lng, d_lat, srid=4326),
-            
-            # ---> FIX 2: Save the addresses to the database! <---
             pickup_address=pickup_address,
             dropoff_address=dropoff_address,
-            
             distance_km=dist_km,
             price=price,
             route_geometry=route_geometry,
@@ -130,7 +152,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         })
 
     # ==========================================
-    # 3.5 CUSTOMER APP: VERIFY PAYMENT (NEW FIX 2)
+    # 3.5 CUSTOMER APP: VERIFY PAYMENT
     # ==========================================
     @action(detail=True, methods=['post'])
     def verify_payment(self, request, pk=None):
@@ -161,12 +183,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     # ==========================================
     # 4. DRIVER APP: COMPLETE RIDE
     # ==========================================
-    @action(
-        detail=True, 
-        methods=['post'], 
-        permission_classes=[IsAuthenticated], 
-        authentication_classes=[JWTAuthentication]
-    )
+    @action(detail=True, methods=['post'])
     def complete_ride(self, request, pk=None):
         order = self.get_object()
         

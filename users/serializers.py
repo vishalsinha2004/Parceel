@@ -4,7 +4,6 @@ from .models import DriverProfile
 
 User = get_user_model()
 
-
 class DriverProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = DriverProfile
@@ -23,6 +22,12 @@ class DriverSignupSerializer(serializers.ModelSerializer):
         model = User
         fields = ['username', 'email', 'password', 'phone_number', 'photo', 'aadhar_card', 'license_image', 'license_number']
 
+    # ---> FIX 1: Catch duplicate usernames gracefully! <---
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("A user with this username already exists.")
+        return value
+
     def create(self, validated_data):
         # 1. Pop out driver-specific data
         photo = validated_data.pop('photo')
@@ -31,7 +36,8 @@ class DriverSignupSerializer(serializers.ModelSerializer):
         license_num = validated_data.pop('license_number')
         password = validated_data.pop('password')
         profile_data = validated_data.pop('driver_profile', {})
-        user = User.objects.create_user(**validated_data)
+        
+        # ---> FIX 2: Removed the accidental duplicate create_user call here <---
 
         # 2. Create the base User
         user = User.objects.create_user(**validated_data)
@@ -47,7 +53,7 @@ class DriverSignupSerializer(serializers.ModelSerializer):
             license_image=license_img,
             license_number=license_num,
             is_verified=False,
-             **profile_data # Default to Not Verified
+            **profile_data # Default to Not Verified
         )
         return user
     
@@ -55,12 +61,16 @@ class DriverSignupSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        # FIX: Add 'phone_number' to this list so Django doesn't ignore it
         fields = ('id', 'username', 'email', 'phone_number', 'password', 'is_customer', 'is_driver')
         extra_kwargs = {'password': {'write_only': True}}
 
+    # Also catch duplicate usernames gracefully for customers
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("A user with this username already exists.")
+        return value
+
     def create(self, validated_data):
-        # FIX: Ensure phone_number is extracted and saved
         phone_number = validated_data.pop('phone_number', None)
         
         user = User.objects.create_user(
@@ -68,6 +78,6 @@ class UserSerializer(serializers.ModelSerializer):
             email=validated_data.get('email', ''),
             password=validated_data['password'],
             is_customer=validated_data.get('is_customer', True),
-            phone_number=phone_number # Save it to the database
+            phone_number=phone_number 
         )
         return user
