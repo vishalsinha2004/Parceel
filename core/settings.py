@@ -166,3 +166,18 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+# ==========================================
+# JAZZMIN ADMIN UI CONFIGURATION
+# ==========================================
+JAZZMIN_SETTINGS = {
+    "site_title": "Parceel Admin",
+    "site_header": "Parceel Admin",
+    "site_brand": "Parceel Delivery",
+    "welcome_sign": "Welcome to Parceel Management",
+    "show_ui_builder": True, 
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "theme": "flatly",
+    "dark_mode_theme": "darkly",
+}
