@@ -9,8 +9,7 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-import os
-import dj_database_url
+
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -21,10 +20,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'your-local-secret-key')
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+SECRET_KEY = 'django-insecure-91sf4=m1udd6#b9$9#5$of2v%lzx8+7ccgmrk)396#3p25&&2g'
 
-ALLOWED_HOSTS = ['*']
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = True
+
+ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -48,7 +49,6 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -84,29 +84,16 @@ import os
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-if 'DATABASE_URL' in os.environ:
-    # --- PRODUCTION (RENDER) ---
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=os.environ.get('DATABASE_URL'),
-            conn_max_age=600,
-            ssl_require=True
-        )
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis', # Important: Use 'postgis', not 'postgresql'
+        'NAME': 'indora_delivery',
+        'USER': 'postgres',        # Default User
+        'PASSWORD': 'Vishal@2004',    # YOUR PASSWORD HERE
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
-    # Force PostGIS engine for location tracking on Render
-    DATABASES['default']['ENGINE'] = 'django.contrib.gis.db.backends.postgis'
-else:
-    # --- LOCAL DEVELOPMENT (YOUR WINDOWS PC) ---
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.contrib.gis.db.backends.postgis', 
-            'NAME': 'indora_delivery',
-            'USER': 'postgres',        
-            'PASSWORD': 'Vishal@2004',    
-            'HOST': 'localhost',
-            'PORT': '5432',
-        }
-    }
+}
 
 if os.name == 'nt':
     # UPDATE THIS LINE with the file you found:
@@ -165,19 +152,4 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
-}
-# ==========================================
-# JAZZMIN ADMIN UI CONFIGURATION
-# ==========================================
-JAZZMIN_SETTINGS = {
-    "site_title": "Parceel Admin",
-    "site_header": "Parceel Admin",
-    "site_brand": "Parceel Delivery",
-    "welcome_sign": "Welcome to Parceel Management",
-    "show_ui_builder": True, 
-}
-
-JAZZMIN_UI_TWEAKS = {
-    "theme": "flatly",
-    "dark_mode_theme": "darkly",
 }
