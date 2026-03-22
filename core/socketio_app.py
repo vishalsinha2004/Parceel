@@ -2,7 +2,12 @@
 import socketio
 
 # Create an Async SocketIO server
-sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
+sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://parceel.netlify.app",
+        "https://p-pilot.netlify.app"
+    ])
 
 @sio.event
 async def connect(sid, environ):

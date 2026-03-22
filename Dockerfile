@@ -27,4 +27,4 @@ RUN python manage.py collectstatic --noinput
 EXPOSE 10000
 
 # Run the ASGI server using uvicorn (required for your Socket.IO implementation)
-CMD gunicorn core.asgi:application -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8000}
+CMD gunicorn core.asgi:application -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-10000}
