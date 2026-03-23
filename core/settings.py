@@ -148,18 +148,6 @@ CORS_ALLOW_CREDENTIALS = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://parceel.netlify.app",    # Customer App
-    "https://p-pilot.netlify.app",    # Driver App
-]
-
-CSRF_TRUSTED_ORIGINS = [
-    "https://parceel.netlify.app",
-    "https://p-pilot.netlify.app",
-]
-
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') # ADD THIS
 
